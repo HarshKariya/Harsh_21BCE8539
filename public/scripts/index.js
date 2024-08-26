@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const board = document.getElementById("root");
+    const socket = io(); 
 
     function createBoard() {
         for (let i = 0; i < 5; i++) {
@@ -48,6 +49,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedPiece = null;
 
     function handleSquareClick(square) {
+        if (!square) {
+            console.error('Square is null or undefined');
+            return;
+        }
+
         const piece = square.querySelector(".piece");
 
         if (piece) {
@@ -62,6 +68,10 @@ document.addEventListener("DOMContentLoaded", () => {
                             square.querySelector(".piece").remove(); 
                         }
                         movePiece(selectedPiece, square);
+                        socket.emit('makeMove', {
+                            from: { row: selectedPiece.dataset.row, col: selectedPiece.dataset.col },
+                            to: { row: square.dataset.row, col: square.dataset.col }
+                        });
                     } else {
                         alert("Invalid move!");
                     }
@@ -77,6 +87,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     square.querySelector(".piece").remove(); 
                 }
                 movePiece(selectedPiece, square);
+                socket.emit('makeMove', {
+                    from: { row: selectedPiece.dataset.row, col: selectedPiece.dataset.col },
+                    to: { row: square.dataset.row, col: square.dataset.col }
+                });
             } else {
                 alert("Invalid move!");
             }
@@ -105,11 +119,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         switch (type) {
             case "pawn":
-                // Pawn moves in any one direction
                 return (Math.abs(rowDiff) <= 1 && Math.abs(colDiff) <= 1) && (!targetPiece || isOpponentPiece);
 
             case "hero1":
-                // Hero1 moves 2 steps in any direction
                 return (
                     ((Math.abs(rowDiff) === 2 && colDiff === 0) || 
                      (rowDiff === 0 && Math.abs(colDiff) === 2) || 
@@ -118,11 +130,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
 
             case "hero2":
-                // Hero2 moves 2 steps diagonally
                 return (Math.abs(rowDiff) === 2 && Math.abs(colDiff) === 2) && (!targetPiece || isOpponentPiece);
 
             case "hero3":
-                // Hero3 moves like a knight in chess (L-shape)
                 return (
                     ((Math.abs(rowDiff) === 2 && Math.abs(colDiff) === 1) || 
                      (Math.abs(rowDiff) === 1 && Math.abs(colDiff) === 2)) &&
@@ -135,4 +145,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     createBoard();
+
+    socket.on('opponentMove', (move) => {
+        const { from, to } = move;
+        const fromSquare = document.querySelector(`[data-row="${from.row}"][data-col="${from.col}"]`);
+        const toSquare = document.querySelector(`[data-row="${to.row}"][data-col="${to.col}"]`);
+        
+        if (fromSquare && toSquare) {
+            const piece = fromSquare.querySelector(".piece");
+            if (piece) {
+                movePiece(piece, toSquare);
+            }
+        }
+    });
 });
