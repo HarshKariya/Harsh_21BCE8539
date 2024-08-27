@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const board = document.getElementById("root");
-    const socket = io(); 
+    let currentTurn = 'A'; // Player A starts
 
     function createBoard() {
         for (let i = 0; i < 5; i++) {
@@ -57,6 +57,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const piece = square.querySelector(".piece");
 
         if (piece) {
+            // Only allow selecting pieces of the current player
+            if (piece.textContent.charAt(0) !== currentTurn) {
+                if (selectedPiece) {
+                    // Attempt to capture
+                    const isValidMove = validateMove(selectedPiece, square);
+                    if (isValidMove) {
+                        capturePiece(selectedPiece, square);
+                        switchTurn();
+                    } else {
+                        alert("Invalid move!");
+                    }
+                } else {
+                    alert(`It's Player ${currentTurn}'s turn!`);
+                }
+                return;
+            }
+
             if (selectedPiece) {
                 if (selectedPiece === piece) {
                     selectedPiece.classList.remove("selected");
@@ -64,14 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     const isValidMove = validateMove(selectedPiece, square);
                     if (isValidMove) {
-                        if (square.querySelector(".piece")) {
-                            square.querySelector(".piece").remove(); 
-                        }
-                        movePiece(selectedPiece, square);
-                        socket.emit('makeMove', {
-                            from: { row: selectedPiece.dataset.row, col: selectedPiece.dataset.col },
-                            to: { row: square.dataset.row, col: square.dataset.col }
-                        });
+                        capturePiece(selectedPiece, square);
+                        switchTurn();
                     } else {
                         alert("Invalid move!");
                     }
@@ -83,14 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (selectedPiece) {
             const isValidMove = validateMove(selectedPiece, square);
             if (isValidMove) {
-                if (square.querySelector(".piece")) {
-                    square.querySelector(".piece").remove(); 
-                }
                 movePiece(selectedPiece, square);
-                socket.emit('makeMove', {
-                    from: { row: selectedPiece.dataset.row, col: selectedPiece.dataset.col },
-                    to: { row: square.dataset.row, col: square.dataset.col }
-                });
+                switchTurn();
             } else {
                 alert("Invalid move!");
             }
@@ -105,7 +110,21 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedPiece = null;
     }
 
+    function capturePiece(attacker, targetSquare) {
+        const capturedPiece = targetSquare.querySelector(".piece");
+        if (capturedPiece) {
+            capturedPiece.remove();
+            console.log(`${attacker.textContent} captured ${capturedPiece.textContent}`);
+        }
+        movePiece(attacker, targetSquare);
+    }
+
     function validateMove(piece, targetSquare) {
+        if (!piece || !targetSquare) {
+            console.error('Piece or target square is null');
+            return false;
+        }
+
         const type = piece.dataset.type;
         const currentRow = parseInt(piece.dataset.row);
         const currentCol = parseInt(piece.dataset.col);
@@ -140,22 +159,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
 
             default:
+                console.error('Unknown piece type:', type);
                 return false;
         }
     }
 
-    createBoard();
+    function switchTurn() {
+        currentTurn = currentTurn === 'A' ? 'B' : 'A';
+        updateTurnDisplay();
+    }
 
-    socket.on('opponentMove', (move) => {
-        const { from, to } = move;
-        const fromSquare = document.querySelector(`[data-row="${from.row}"][data-col="${from.col}"]`);
-        const toSquare = document.querySelector(`[data-row="${to.row}"][data-col="${to.col}"]`);
-        
-        if (fromSquare && toSquare) {
-            const piece = fromSquare.querySelector(".piece");
-            if (piece) {
-                movePiece(piece, toSquare);
-            }
+    function updateTurnDisplay() {
+        const turnDisplay = document.getElementById('turnDisplay');
+        if (turnDisplay) {
+            turnDisplay.textContent = `Current Turn: Player ${currentTurn}`;
         }
-    });
+    }
+
+    createBoard();
+    updateTurnDisplay();
 });
