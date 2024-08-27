@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const board = document.getElementById("root");
-    let currentTurn = 'A'; // Player A starts
+    let currentTurn = 'A'; 
 
     function createBoard() {
         for (let i = 0; i < 5; i++) {
@@ -57,10 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const piece = square.querySelector(".piece");
 
         if (piece) {
-            // Only allow selecting pieces of the current player
             if (piece.textContent.charAt(0) !== currentTurn) {
                 if (selectedPiece) {
-                    // Attempt to capture
                     const isValidMove = validateMove(selectedPiece, square);
                     if (isValidMove) {
                         capturePiece(selectedPiece, square);
